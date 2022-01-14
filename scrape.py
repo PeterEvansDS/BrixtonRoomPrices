@@ -4,8 +4,7 @@ import pandas as pd
 from requests_html import HTML
 from requests_html import HTMLSession
 from math import ceil
-from transformers import DataCleaner
-
+from preprocessing import PropertyRemover, PriceExtractor, AvailabilityTransformer, TermTransformer, AdRefExtractor, PostcodeExtractor, DepositTransformer, TimeToStationExtractor, BinaryEncoder, OrdinalEncoder, OneHotEncoder
 
 class SpareRoomScraper():
     """ Extract all the required data from SpareRoom. """
@@ -18,7 +17,6 @@ class SpareRoomScraper():
         self.base_url = BASE_URL
         self.testurl = TEST_URL
         self.info_box_xpath = INFO_BOX_XPATH
-
 
     def get_source(self, url):
         """ Return the source code for the given URL. """
@@ -115,11 +113,10 @@ class SpareRoomScraper():
         data = [self.extract_listing_data(url) for url in listing_links]
         df = pd.DataFrame(data)
 
-        cleaner = DataCleaner()
-        df = cleaner.fit_transform(df)
-
         return df
 
+
+        #TODO: add in option to save properly formatted DataFrame
     def save_data(self, X, path = 'blank'):
         X = X.reset_index()
         if path == 'blank':
