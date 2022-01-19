@@ -1,21 +1,23 @@
-from config import HEADERS, INFO_BOX_XPATH, TEST_URL, SEARCH_URL, BASE_URL, SEARCH_ID
+from config import HEADERS, INFO_BOX_XPATH, BASE_URL
 import requests
 import pandas as pd
 from requests_html import HTML
 from requests_html import HTMLSession
 from math import ceil
-from preprocessing import PropertyRemover, PriceExtractor, AvailabilityTransformer, TermTransformer, AdRefExtractor, PostcodeExtractor, DepositTransformer, TimeToStationExtractor, BinaryEncoder, OrdinalEncoder, OneHotEncoder
+from preprocessing import (PropertyRemover, PriceExtractor, AvailabilityTransformer,
+                           TermTransformer, AdRefExtractor, PostcodeExtractor,
+                           DepositTransformer, TimeToStationExtractor, BinaryEncoder,
+                           OrdinalEncoder, OneHotEncoder)
 
 class SpareRoomScraper():
     """ Extract all the required data from SpareRoom. """
 
-    def __init__(self):
+    def __init__(self, search_id):
         self.session = HTMLSession()
         self.headers = HEADERS
-        self.search_id = SEARCH_ID
-        self.search_url = SEARCH_URL
+        self.search_id = str(search_id)
+        self.search_url = 'https://www.spareroom.co.uk/flatshare/index.cgi?&search_id=' + self.search_id + '&offset=0&sort_by='
         self.base_url = BASE_URL
-        self.testurl = TEST_URL
         self.info_box_xpath = INFO_BOX_XPATH
 
     def get_source(self, url):
@@ -115,8 +117,6 @@ class SpareRoomScraper():
 
         return df
 
-
-        #TODO: add in option to save properly formatted DataFrame
     def save_data(self, X, path = 'blank'):
         X = X.reset_index()
         if path == 'blank':

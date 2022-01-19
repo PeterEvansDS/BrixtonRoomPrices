@@ -1,18 +1,18 @@
 import pandas as pd
+import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
 import string
 from config import BINARY_COLS, ONE_HOT_COLS, ORDINAL_COLS
 from encoders import binary_encode, ordinal_encode, one_hot_encode
-
-#transformers are written in classes that can be used within an sklearn pipeline
 
 class PropertyRemover(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
-        return X[~X.house_type.str.contains('rent')]
+        return X[~X.house_type.str.contains('rent|property', regex=True)]
 
 class PriceExtractor(BaseEstimator, TransformerMixin):
 
@@ -30,7 +30,8 @@ class PriceExtractor(BaseEstimator, TransformerMixin):
             type = None
         type = type.map(lambda x: x.replace('/en suite', ''))
 
-        return pd.DataFrame({'price':price, 'price_rate':rate, 'double':binary_encode(type, 'double'), 'ensuite':binary_encode(ensuite, 'ensuite')})
+        return pd.DataFrame({'price':price, 'price_rate':rate, 'double':binary_encode(type, 'double'),
+                             'ensuite':binary_encode(ensuite, 'ensuite')})
 
     def convert_price(self, df):
         price_pcm = df.apply(lambda x: x['price'] if x['price_rate'] == 'pcm' else x['price']*52/12, axis = 1)
@@ -141,17 +142,31 @@ class OneHotEncoder(BaseEstimator, TransformerMixin):
     def transform(self, X):
         return one_hot_encode(X)
 
-
 class Imputer(BaseEstimator, TransformerMixin):
 
     def __init__(self, na_impute = False):
-        self.na_impute = False
+        self.na_impute = na_impute
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
+        X = np.where(X == '', np.nan, X)
         if self.na_impute == True:
             return SimpleImputer(strategy='median').fit_transform(X)
         else:
             return pd.DataFrame(X).dropna()
+
+def extract_target(df):
+    pe = PriceExtractor()
+    extracted_data = pe.fit_transform(df)
+    df = df.drop('price', axis = 1)
+    df = df.join(extracted_data)
+    return df.drop('price', axis = 1), df['price']
+
+def prep_for_model(df):
+    prep_df = df.replace('', np.nan)
+    pr = PropertyRemover()
+    prep_df = pr.fit_transform(prep_df)
+    X, y = extract_target(prep_df)
+    return train_test_split(X, y, test_size=0.2, random_state=0)
